@@ -5,7 +5,7 @@ import pandas as pd
 # -------------------------
 # API CONFIG
 # -------------------------
-API_URL = "https://your-app.onrender.com"
+API_URL = "https://dme-saas-r1ir.onrender.com"
 
 st.set_page_config(page_title="DME SaaS Dashboard", layout="wide")
 
