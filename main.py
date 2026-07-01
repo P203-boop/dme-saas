@@ -1,17 +1,22 @@
-from fastapi import Form
-from fastapi import FastAPI
+from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
 
+from auth import authenticate_user, create_access_token
 from database import Base, engine
 from routers import patients, orders, process
 
-# create tables
+# -----------------------
+# CREATE TABLES
+# -----------------------
 Base.metadata.create_all(bind=engine)
 
+# -----------------------
+# APP INIT
+# -----------------------
 app = FastAPI(title="DME SaaS Platform")
 
 # -----------------------
-# CORS (for frontend later)
+# CORS (for frontend / Streamlit)
 # -----------------------
 app.add_middleware(
     CORSMiddleware,
@@ -22,16 +27,24 @@ app.add_middleware(
 )
 
 # -----------------------
-# ROUTES
+# ROUTERS
 # -----------------------
 app.include_router(patients.router)
 app.include_router(orders.router)
 app.include_router(process.router)
 
+# -----------------------
+# HEALTH CHECK
+# -----------------------
+
 
 @app.get("/")
 def root():
     return {"message": "DME SaaS API Running"}
+
+# -----------------------
+# LOGIN ENDPOINT
+# -----------------------
 
 
 @app.post("/login")
