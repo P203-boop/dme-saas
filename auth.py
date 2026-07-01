@@ -4,7 +4,6 @@ from jose import jwt
 SECRET_KEY = "dme-secret-key"
 ALGORITHM = "HS256"
 
-# Demo user
 fake_user = {
     "username": "admin",
     "password": "admin123"
