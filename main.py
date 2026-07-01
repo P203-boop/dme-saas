@@ -47,17 +47,25 @@ def root():
 # -----------------------
 
 
+@app.get("/")
+def root():
+    return {"message": "DME SaaS API Running"}
+
+
 @app.post("/login")
 def login(username: str = Form(...), password: str = Form(...)):
+    try:
+        user = authenticate_user(username, password)
 
-    user = authenticate_user(username, password)
+        if not user:
+            return {"error": "Invalid credentials"}
 
-    if not user:
-        return {"error": "Invalid credentials"}
+        token = create_access_token({"sub": username})
 
-    token = create_access_token({"sub": username})
+        return {
+            "access_token": token,
+            "token_type": "bearer"
+        }
 
-    return {
-        "access_token": token,
-        "token_type": "bearer"
-    }
+    except Exception as e:
+        return {"error": str(e)}
