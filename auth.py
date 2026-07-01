@@ -12,11 +12,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # fake user (we will upgrade later to DB users)
-fake_users_db = {
-    "admin": {
-        "username": "admin",
-        "hashed_password": pwd_context.hash("admin123")
-    }
+fake_user = {
+    "username": "admin",
+    "hashed_password": "$2b$12$KIXQx....(precomputed hash here)"
 }
 
 # -------------------------
