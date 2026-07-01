@@ -1,48 +1,24 @@
 from datetime import datetime, timedelta
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+from jose import jwt
 
-# -------------------------
-# SECURITY CONFIG
-# -------------------------
-SECRET_KEY = "dme_saas_secret_key_change_this"
+SECRET_KEY = "dme-secret-key"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# fake user (we will upgrade later to DB users)
+# Demo user
 fake_user = {
     "username": "admin",
-    "hashed_password": "$2b$12$KIXQx....(precomputed hash here)"
+    "password": "admin123"
 }
-
-# -------------------------
-# PASSWORD HELPERS
-# -------------------------
-
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
 
 
 def authenticate_user(username: str, password: str):
-    user = fake_users_db.get(username)
-    if not user:
-        return False
-    if not verify_password(password, user["hashed_password"]):
-        return False
-    return user
-
-# -------------------------
-# TOKEN CREATION
-# -------------------------
+    if username == fake_user["username"] and password == fake_user["password"]:
+        return fake_user
+    return None
 
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    expire = datetime.utcnow() + timedelta(hours=1)
+    to_encode["exp"] = expire
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
