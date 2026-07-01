@@ -5,7 +5,7 @@ import pandas as pd
 # -------------------------
 # API CONFIG
 # -------------------------
-API_URL = "http://127.0.0.1:8000"
+API_URL = "https://your-app.onrender.com"
 
 st.set_page_config(page_title="DME SaaS Dashboard", layout="wide")
 
@@ -54,6 +54,7 @@ def safe_get(url):
     except:
         return []
 
+
 def safe_post(url, payload):
     try:
         r = requests.post(url, json=payload, headers=get_headers(), timeout=5)
@@ -98,8 +99,10 @@ col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("Total Patients", len(patients))
 col2.metric("Total Orders", len(orders))
-col3.metric("Flagged Orders", len([o for o in orders if o.get("status") == "FLAGGED"]))
-col4.metric("Routed Orders", len([o for o in orders if o.get("status") == "ROUTED_TO_TRANSPORT"]))
+col3.metric("Flagged Orders", len(
+    [o for o in orders if o.get("status") == "FLAGGED"]))
+col4.metric("Routed Orders", len(
+    [o for o in orders if o.get("status") == "ROUTED_TO_TRANSPORT"]))
 
 st.divider()
 
