@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from auth import get_current_user
-from database import get_db
-from models import Patient
-from schemas import PatientCreate
+from app.auth import get_current_user
+from app.database import get_db
+from app.models import Patient
+from app.schemas import PatientCreate
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
@@ -15,7 +15,7 @@ def create_patient(payload: PatientCreate, db: Session = Depends(get_db)):
     patient = Patient(
         first_name=payload.first_name,
         last_name=payload.last_name,
-        insurance_id=payload.insurance_id
+        insurance_id=payload.insurance_id,
     )
 
     db.add(patient)

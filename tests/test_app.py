@@ -4,13 +4,13 @@ from fastapi import HTTPException
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from auth import authenticate_user
-from database import Base
-from routers.orders import create_order
-from routers.patients import create_patient
-from routers.process import process_order
-from schemas import OrderCreate, PatientCreate
-from services.eligibility import check_eligibility
+from app.auth import authenticate_user
+from app.database import Base
+from app.routers.orders import create_order
+from app.routers.patients import create_patient
+from app.routers.process import process_order
+from app.schemas import OrderCreate, PatientCreate
+from app.services.eligibility import check_eligibility
 
 
 class DmeSaasTests(unittest.TestCase):

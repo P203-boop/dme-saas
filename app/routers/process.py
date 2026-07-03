@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from auth import get_current_user
-from database import get_db
-from models import Order, Patient
-from services.eligibility import check_eligibility
+from app.auth import get_current_user
+from app.database import get_db
+from app.models import Order, Patient
+from app.services.eligibility import check_eligibility
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
@@ -35,5 +35,5 @@ def process_order(order_id: str, db: Session = Depends(get_db)):
         "order_id": order.id,
         "status": order.status,
         "eligible": eligible,
-        "flag_reason": order.flag_reason
+        "flag_reason": order.flag_reason,
     }
