@@ -46,9 +46,31 @@ def api_request(method, path, **kwargs):
         return None
 
 
+def response_error(response):
+    try:
+        detail = response.json().get("detail")
+        if detail:
+            return detail
+    except ValueError:
+        pass
+    return response.text or f"HTTP {response.status_code}"
+
+
+def patient_label(patient):
+    name = f"{patient.get('first_name', '')} {patient.get('last_name', '')}".strip()
+    return f"{name or 'Unnamed patient'} ({patient.get('id')})"
+
+
+def order_label(order):
+    return (
+        f"{order.get('dme_code', 'Unknown DME')} - "
+        f"{order.get('status', 'UNKNOWN')} ({order.get('id')})"
+    )
+
+
 def get_json(path):
     response = api_request("GET", path)
-    if not response:
+    if response is None:
         st.warning("Backend not reachable.")
         return []
     if response.status_code == 401:
@@ -56,7 +78,7 @@ def get_json(path):
         st.error("Session expired. Please log in again.")
         st.rerun()
     if response.status_code != 200:
-        st.warning(f"Failed to load {path}.")
+        st.warning(f"Failed to load {path}: {response_error(response)}")
         return []
     return response.json()
 
@@ -135,15 +157,26 @@ with st.form("patient_form"):
 
         response = api_request("POST", "/patients", json=payload)
 
-        if response and response.status_code in (200, 201):
+        if response is not None and response.status_code in (200, 201):
             st.success("Patient created successfully!")
             st.rerun()
+        elif response is None:
+            st.error("Backend not reachable or error occurred")
         else:
-            st.error("Failed to create patient")
+            st.error(f"Failed to create patient: {response_error(response)}")
 
 st.subheader("Create Order")
 with st.form("order_form"):
-    patient_id = st.text_input("Patient ID")
+    if patients:
+        selected_patient = st.selectbox(
+            "Patient",
+            patients,
+            format_func=patient_label,
+        )
+        patient_id = selected_patient.get("id")
+    else:
+        patient_id = st.text_input("Patient ID")
+
     dme_code = st.text_input("DME Code")
     qty = st.number_input("Quantity", min_value=1, step=1)
 
@@ -158,23 +191,33 @@ with st.form("order_form"):
 
         response = api_request("POST", "/orders", json=payload)
 
-        if response and response.status_code in (200, 201):
+        if response is not None and response.status_code in (200, 201):
             st.success("Order created successfully!")
             st.rerun()
+        elif response is None:
+            st.error("Backend not reachable or error occurred")
         else:
-            st.error("Failed to create order")
+            st.error(f"Failed to create order: {response_error(response)}")
 
 st.subheader("Process Order")
 
-order_id = st.text_input("Order ID")
+if orders:
+    selected_order = st.selectbox(
+        "Order",
+        orders,
+        format_func=order_label,
+    )
+    order_id = selected_order.get("id")
+else:
+    order_id = st.text_input("Order ID")
 
 if st.button("Process Order"):
     response = api_request("POST", f"/process/{order_id}")
 
-    if not response:
+    if response is None:
         st.error("Backend not reachable or error occurred")
     elif response.status_code == 200:
         st.success(response.json())
         st.rerun()
     else:
-        st.error("Failed to process order")
+        st.error(f"Failed to process order: {response_error(response)}")
