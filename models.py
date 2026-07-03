@@ -1,8 +1,12 @@
 from sqlalchemy import Column, String, Integer, DateTime
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from database import Base
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 class Patient(Base):
@@ -23,4 +27,4 @@ class Order(Base):
     qty = Column(Integer)
     status = Column(String, default="NEW")
     flag_reason = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
