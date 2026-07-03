@@ -1,73 +1,68 @@
-import streamlit as st
-import requests
-import pandas as pd
+import os
 
-# -------------------------
-# API CONFIG
-# -------------------------
-API_URL = "https://dme-saas-r1ir.onrender.com"
+import pandas as pd
+import requests
+import streamlit as st
+
+API_URL = os.getenv("DME_API_URL", "https://dme-saas-r1ir.onrender.com")
+REQUEST_TIMEOUT = 5
 
 st.set_page_config(page_title="DME SaaS Dashboard", layout="wide")
+st.title("DME SaaS Operations Dashboard")
 
-st.title("🏥 DME SaaS Operations Dashboard")
-
-# -------------------------
-# SESSION STATE
-# -------------------------
 if "token" not in st.session_state:
     st.session_state.token = None
 
 
-# -------------------------
-# LOGIN FUNCTION
-# -------------------------
 def login(username, password):
     try:
         response = requests.post(
             f"{API_URL}/login",
             data={"username": username, "password": password},
-            timeout=5
+            timeout=REQUEST_TIMEOUT,
         )
-        if response.status_code == 200:
-            return response.json().get("access_token")
-        return None
-    except:
+    except requests.RequestException:
         return None
 
+    if response.status_code == 200:
+        return response.json().get("access_token")
+    return None
 
-# -------------------------
-# AUTH HEADERS
-# -------------------------
+
 def get_headers():
-    return {
-        "Authorization": f"Bearer {st.session_state.token}"
-    }
+    return {"Authorization": f"Bearer {st.session_state.token}"}
 
 
-# -------------------------
-# SAFE API CALLS
-# -------------------------
-def safe_get(url):
+def api_request(method, path, **kwargs):
     try:
-        r = requests.get(url, headers=get_headers(), timeout=5)
-        return r.json()
-    except:
-        return []
-
-
-def safe_post(url, payload):
-    try:
-        r = requests.post(url, json=payload, headers=get_headers(), timeout=5)
-        return r
-    except:
+        return requests.request(
+            method,
+            f"{API_URL}{path}",
+            headers=get_headers(),
+            timeout=REQUEST_TIMEOUT,
+            **kwargs,
+        )
+    except requests.RequestException:
         return None
 
 
-# -------------------------
-# LOGIN SCREEN
-# -------------------------
+def get_json(path):
+    response = api_request("GET", path)
+    if not response:
+        st.warning("Backend not reachable.")
+        return []
+    if response.status_code == 401:
+        st.session_state.token = None
+        st.error("Session expired. Please log in again.")
+        st.rerun()
+    if response.status_code != 200:
+        st.warning(f"Failed to load {path}.")
+        return []
+    return response.json()
+
+
 if not st.session_state.token:
-    st.subheader("🔐 Login")
+    st.subheader("Login")
 
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
@@ -85,44 +80,37 @@ if not st.session_state.token:
     st.stop()
 
 
-# -------------------------
-# LOAD DATA
-# -------------------------
-patients = safe_get(f"{API_URL}/patients")
-orders = safe_get(f"{API_URL}/orders")
+patients = get_json("/patients")
+orders = get_json("/orders")
 
-
-# -------------------------
-# METRICS
-# -------------------------
 col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("Total Patients", len(patients))
 col2.metric("Total Orders", len(orders))
-col3.metric("Flagged Orders", len(
-    [o for o in orders if o.get("status") == "FLAGGED"]))
-col4.metric("Routed Orders", len(
-    [o for o in orders if o.get("status") == "ROUTED_TO_TRANSPORT"]))
+col3.metric(
+    "Flagged Orders",
+    len([order for order in orders if order.get("status") == "FLAGGED"]),
+)
+col4.metric(
+    "Routed Orders",
+    len(
+        [
+            order
+            for order in orders
+            if order.get("status") == "ROUTED_TO_TRANSPORT"
+        ]
+    ),
+)
 
 st.divider()
 
-
-# -------------------------
-# PATIENTS TABLE
-# -------------------------
 st.subheader("Patients")
-
 if patients:
     st.dataframe(pd.DataFrame(patients))
 else:
     st.write("No patients found.")
 
-
-# -------------------------
-# ORDERS TABLE
-# -------------------------
 st.subheader("Orders")
-
 if orders:
     st.dataframe(pd.DataFrame(orders))
 else:
@@ -130,12 +118,7 @@ else:
 
 st.divider()
 
-
-# -------------------------
-# CREATE PATIENT
-# -------------------------
-st.subheader("➕ Create Patient")
-
+st.subheader("Create Patient")
 with st.form("patient_form"):
     first_name = st.text_input("First Name")
     last_name = st.text_input("Last Name")
@@ -147,23 +130,18 @@ with st.form("patient_form"):
         payload = {
             "first_name": first_name,
             "last_name": last_name,
-            "insurance_id": insurance_id
+            "insurance_id": insurance_id,
         }
 
-        r = safe_post(f"{API_URL}/patients", payload)
+        response = api_request("POST", "/patients", json=payload)
 
-        if r and r.status_code == 200:
+        if response and response.status_code in (200, 201):
             st.success("Patient created successfully!")
             st.rerun()
         else:
             st.error("Failed to create patient")
 
-
-# -------------------------
-# CREATE ORDER
-# -------------------------
-st.subheader("📦 Create Order")
-
+st.subheader("Create Order")
 with st.form("order_form"):
     patient_id = st.text_input("Patient ID")
     dme_code = st.text_input("DME Code")
@@ -175,37 +153,28 @@ with st.form("order_form"):
         payload = {
             "patient_id": patient_id,
             "dme_code": dme_code,
-            "qty": qty
+            "qty": qty,
         }
 
-        r = safe_post(f"{API_URL}/orders", payload)
+        response = api_request("POST", "/orders", json=payload)
 
-        if r and r.status_code == 200:
+        if response and response.status_code in (200, 201):
             st.success("Order created successfully!")
             st.rerun()
         else:
             st.error("Failed to create order")
 
-
-# -------------------------
-# PROCESS ORDER
-# -------------------------
-st.subheader("⚙️ Process Order")
+st.subheader("Process Order")
 
 order_id = st.text_input("Order ID")
 
 if st.button("Process Order"):
-    try:
-        r = requests.post(
-            f"{API_URL}/process/{order_id}",
-            headers=get_headers(),
-            timeout=5
-        )
+    response = api_request("POST", f"/process/{order_id}")
 
-        if r.status_code == 200:
-            st.success(r.json())
-            st.rerun()
-        else:
-            st.error("Failed to process order")
-    except:
+    if not response:
         st.error("Backend not reachable or error occurred")
+    elif response.status_code == 200:
+        st.success(response.json())
+        st.rerun()
+    else:
+        st.error("Failed to process order")

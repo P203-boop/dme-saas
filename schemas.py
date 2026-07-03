@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from pydantic import Field
 
 
 class PatientCreate(BaseModel):
@@ -10,4 +11,4 @@ class PatientCreate(BaseModel):
 class OrderCreate(BaseModel):
     patient_id: str
     dme_code: str
-    qty: int
+    qty: int = Field(gt=0)

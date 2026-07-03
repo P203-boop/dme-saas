@@ -1,9 +1,9 @@
-from fastapi import FastAPI, Form
-from fastapi.middleware.cors import CORSMiddleware
-
-from auth import authenticate_user, create_access_token
-from database import Base, engine
 from routers import patients, orders, process
+from database import Base, engine
+from auth import authenticate_user, create_access_token
+from fastapi import FastAPI, Form, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+import os
 
 # -----------------------
 # CREATE TABLES
@@ -16,12 +16,18 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="DME SaaS Platform")
 
 # -----------------------
-# CORS (for frontend / Streamlit)
+# CORS
 # -----------------------
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "*").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -47,25 +53,21 @@ def root():
 # -----------------------
 
 
-@app.get("/")
-def root():
-    return {"message": "DME SaaS API Running"}
-
-
 @app.post("/login")
 def login(username: str = Form(...), password: str = Form(...)):
-    try:
-        user = authenticate_user(username, password)
+    user = authenticate_user(username, password)
 
-        if not user:
-            return {"error": "Invalid credentials"}
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-        token = create_access_token({"sub": username})
+    token = create_access_token({"sub": username})
 
-        return {
-            "access_token": token,
-            "token_type": "bearer"
-        }
-
-    except Exception as e:
-        return {"error": str(e)}
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": username
+    }
